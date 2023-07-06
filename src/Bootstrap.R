@@ -37,22 +37,20 @@ bootstrap.ci <-
 
     method <- method[1]
     if (method == 'normal') {
-      bs.est   <- mean(bs.x)
+      bs.est   <- stat(x)
       bs.sd    <- sd(bs.x)
       z        <- qnorm(alpha / 2)
       bs.hlen  <- z * bs.sd
       bs.lower <- bs.est + bs.hlen
       bs.upper <- bs.est - bs.hlen
     } else if (method == 'basic') {
-      est_     <- stat(x)
-      bs.est   <- est_
-      bs.diff  <- bs.x - est_
-      qdiff    <- quantile(bs.diff,
-                           probs = c(alpha / 2,
-                                     1 - alpha / 2),
-                           names = FALSE)
-      bs.lower <- est_ + qdiff[1]
-      bs.upper <- est_ + qdiff[2]
+      bs.est <- stat(x)
+      qbsx   <- quantile(bs.x,
+                         probs = c(alpha / 2,
+                                   1 - alpha / 2),
+                         names = FALSE)
+      bs.lower <- 2 * bs.est - qbsx[2]
+      bs.upper <- 2 * bs.est - qbsx[1]
     } else if (method == 'percentile') {
       bs.est   <- mean(bs.x)
       qbsx     <- quantile(bs.x,
@@ -71,14 +69,14 @@ bootstrap.ci <-
 
 
 bootstrap.coverage <-
-  function (r.fun, stat, par.true, ci.fun,
+  function (r.fun, stat, par.true,
             n.sample = 100,
             n.mc = 100,
             n.bs = 100,
             levels = c(.90, .95, .99),
             methods = available.bootstrap.methods) {
     r.fun  <- rlang::as_function(r.fun)
-    ci.fun <- rlang::as_function(ci.fun)
+
     pmap_dfr(
       expand_grid(level = levels, method = methods),
       function (level, method) {
@@ -88,10 +86,9 @@ bootstrap.coverage <-
         walk(1:n.mc, function (ii) {
           x              <- r.fun(n.sample)
           ci             <- bootstrap.ci(x, stat, n.bs, level, method)
-          ci_            <- ci.fun(level)
           par.inside[ii] <<- between(par.true, ci$lower, ci$upper)
-          lower.miss[ii] <<- ci$lower > ci_[[1]]
-          upper.miss[ii] <<- ci$upper < ci_[[2]]
+          lower.miss[ii] <<- ci$lower > par.true
+          upper.miss[ii] <<- ci$upper < par.true
         })
         c(Method          = method, Level = level,
           'Coverage Rate' = mean(par.inside),
