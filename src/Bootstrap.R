@@ -4,7 +4,7 @@ source('SamUtils.R')
 require(tidyverse)
 
 
-available.bootstrap.methods <- c('normal', 'basic', 'percentile')
+available.bootstrap.methods <- c('normal', 'basic', 'percentile', 'BCa')
 
 #######################################################
 # Bootstrap resampling mathod                         #
@@ -38,7 +38,7 @@ bootstrap.ci <-
                       stat(x_(ii))
                     })
 
-    method <- method[1]
+    method <- tolower(method[1])
     if (method == 'normal') {
       bs.est   <- stat(x)
       bs.sd    <- sd(bs.x)
@@ -62,6 +62,19 @@ bootstrap.ci <-
                            names = FALSE)
       bs.lower <- qbsx[1]
       bs.upper <- qbsx[2]
+    } else if (method == 'bca') {
+      bs.est   <- stat(x)
+      est_     <- mean(bs.x)
+      z0.hat   <- qnorm(sum(bs.x < bs.est) / size)
+      acc.hat  <-
+        sum((bs.x - est_)^3) /
+          6 /
+          ((sum((bs.x - est_)^2))^(1.5))
+      z        <- z0.hat + qnorm(c(alpha / 2, 1 - alpha / 2))
+      alpha    <- pnorm(z0.hat + z / (1 - acc.hat * z))
+      qbs      <- quantile(bs.x, probs = alpha, names = FALSE)
+      bs.lower <- qbs[1]
+      bs.upper <- qbs[2]
     } else {
       stop('Unknown method: ', method)
     }
