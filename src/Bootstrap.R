@@ -1,5 +1,8 @@
 ## Unils for handling different type of samples
 source('SamUtils.R')
+## Dependencies
+require(tidyverse)
+
 
 available.bootstrap.methods <- c('normal', 'basic', 'percentile')
 
@@ -44,11 +47,11 @@ bootstrap.ci <-
       bs.lower <- bs.est + bs.hlen
       bs.upper <- bs.est - bs.hlen
     } else if (method == 'basic') {
-      bs.est <- stat(x)
-      qbsx   <- quantile(bs.x,
-                         probs = c(alpha / 2,
-                                   1 - alpha / 2),
-                         names = FALSE)
+      bs.est   <- stat(x)
+      qbsx     <- quantile(bs.x,
+                           probs = c(alpha / 2,
+                                     1 - alpha / 2),
+                           names = FALSE)
       bs.lower <- 2 * bs.est - qbsx[2]
       bs.upper <- 2 * bs.est - qbsx[1]
     } else if (method == 'percentile') {
@@ -75,7 +78,7 @@ bootstrap.coverage <-
             n.bs = 100,
             levels = c(.90, .95, .99),
             methods = available.bootstrap.methods) {
-    r.fun  <- rlang::as_function(r.fun)
+    r.fun <- rlang::as_function(r.fun)
 
     pmap_dfr(
       expand_grid(level = levels, method = methods),
@@ -90,7 +93,8 @@ bootstrap.coverage <-
           lower.miss[ii] <<- ci$lower > par.true
           upper.miss[ii] <<- ci$upper < par.true
         })
-        c(Method          = method, Level = level,
+        c('Method'        = method,
+          'Level'         = level,
           'Coverage Rate' = mean(par.inside),
           'Lower Miss'    = mean(lower.miss),
           'Upper Miss'    = mean(upper.miss))
